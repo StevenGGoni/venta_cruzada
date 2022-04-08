@@ -1,7 +1,6 @@
 # Libraries ---------------------------------------------------------------
 
 library(shiny)
-library(shinythemes)
 library(DBI)
 library(RPostgres)
 library(tidyverse)
@@ -60,11 +59,11 @@ consolidado <- factura_linea %>%
   dplyr::mutate(nombre_cliente = stringr::str_c(nombre, apellido1, apellido2, 
                                                 sep = " "))
 
+
 ui <- fluidPage(
-  
-  # theme
-  
-  theme = shinytheme("cosmo"),
+
+# Aplicacion --------------------------------------------------------------
+
   
   # Application title
   titlePanel("Dr Max. - Ventas cruzadas por cliente",
@@ -92,12 +91,6 @@ ui <- fluidPage(
       
       downloadButton("descargar", "Descargar datos en MS Excel"),
 
-      # linea horizontal
-      
-      tags$hr(),
-      tags$hr(),
-      tags$hr(),
-      
     ),
     
     # visualización de reporte
@@ -121,18 +114,23 @@ server <- function(input, output) {
     group_cliente <- consolidado %>% 
       dplyr::group_by(nombre_cliente, descripcion) %>% 
       dplyr::summarise(n = n(),
-                       tot = sum(precio_unitario)) 
+                       tot = sum(precio_unitario)) %>% 
+      dplyr::ungroup()
     
     cant_familia <- group_cliente %>% 
       dplyr::arrange(desc(n)) %>%
       tidyr::pivot_wider(id_cols = nombre_cliente, names_from = descripcion, 
-                         values_from = n)
-    
+                         values_from = n) %>% 
+      dplyr::mutate(venta_cruzada = if_else(rowSums(!is.na(.)) -1 < 2, 
+                                            "NO", "SI"))
+
     din_familia <- group_cliente %>% 
-      dplyr::arrange(desc(tot)) %>%
+      dplyr::arrange(desc(n)) %>%
       dplyr::mutate(tot = scales::dollar(tot, prefix = "₡")) %>% 
       tidyr::pivot_wider(id_cols = nombre_cliente, names_from = descripcion, 
-                         values_from = tot)
+                         values_from = tot) %>% 
+      dplyr::mutate(venta_cruzada = if_else(rowSums(!is.na(.)) -1 < 2, 
+                                            "NO", "SI"))
     
 
     
